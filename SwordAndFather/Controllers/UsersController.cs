@@ -1,10 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using SwordAndFather.Data;
 using SwordAndFather.Models;
+using SwordAndFather.Validators;
 
 namespace SwordAndFather.Controllers
 {
@@ -17,7 +18,16 @@ namespace SwordAndFather.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        static List<User> _users = new List<User>();
+        // Dig into the access Modifiers
+        readonly UserRepository _userRepository;
+        readonly CreateUserRequestValidator _validator;
+
+        // UsersController Constructor
+        public UsersController()
+        {
+            _validator = new CreateUserRequestValidator();
+            _userRepository = new UserRepository();
+        }
 
         /// <summary>
         /// Creates a new user in the system
@@ -40,15 +50,14 @@ namespace SwordAndFather.Controllers
         [ProducesResponseType(400)]
         public ActionResult AddUser([FromBody]CreateUserRequest createRequest)
         {
-            if (string.IsNullOrEmpty(createRequest.UserName) 
-                || string.IsNullOrEmpty(createRequest.Password))
+            if (_validator.Validate(createRequest))
             {
                 return BadRequest(new { error = "Users must have a username and password" });
             }
-            var newUser = new User(createRequest.UserName, createRequest.Password);
-            newUser.Id = _users.Count + 1;
-            _users.Add(newUser);
+            
+            var newUser = _userRepository.AddUser(createRequest.UserName, createRequest.Password);
 
+            // http response
             return Created($"api/users/{newUser.Id}", newUser);
         }
     }
